@@ -11,10 +11,10 @@
      . . . . . .
 
   - 通知公告
-     内置了2023-08-27 22:34:27前http://www.hljit.edu.cn/Category_296/Index.aspx的页面信息
+     内置了2023-08-27 22:34:27前 http://www.hljit.edu.cn/Category_296/Index.aspx 的页面信息
 
   - 文件下载
-     内置了2023-08-27 22:35:13前http://www.hljit.edu.cn/Category_298/Index.aspx的页面信息
+     内置了2023-08-27 22:35:13前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
 
 - main.py
   第11行中的‘my_sender’值修改为发件邮箱\n
