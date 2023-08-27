@@ -22,6 +22,7 @@
      内置了2023-08-27 22:35:13前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
 
 - main.py
+  
   第11行中的‘my_sender’值修改为发件邮箱
   
   第12行中的‘my_user’值修改为邮箱用户名
@@ -34,6 +35,7 @@
 
 
 - no-gui.py
+  
   与main.py使用方法无异
   
   主程序的无输入版本，将main.py中需输入的数值设置为常量，适合托管到服务器运行
