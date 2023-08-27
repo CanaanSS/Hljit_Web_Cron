@@ -27,8 +27,8 @@ def send_mail(to_list, sub, content):
 
 
 # 获取输入的邮箱和秒数
-emails = 'youmail@yourdomain.com'#多个用+++隔开
-seconds = int(15)#监控频率秒数
+emails = 'yourmail@domain.com+++yourmail2@domain.com' #接收通知的邮箱
+seconds = int(80) #运行频率
 email_list = emails.split('+++')
 
 with open('./links/config', encoding='utf-8') as f:
@@ -85,7 +85,20 @@ while True:
         code = codes[i]
 
         # 判断状态码
+    try:
         res = requests.get(url)
+        res.raise_for_status()
+    except requests.ConnectionError:
+        now = time.localtime()
+        if now.tm_hour >= 8 and now.tm_hour <= 23:
+            print('连接异常,暂停15分钟')
+            time.sleep(15 * 60)
+        else:
+            print('连接异常,暂停到8点')
+            while now.tm_hour < 8:
+                time.sleep(600)
+                now = time.localtime()
+
         if res.status_code == 200:
             print(f'{url} 状态码正常,继续运行')
         else:
