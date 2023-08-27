@@ -8,14 +8,17 @@
   - config
   -
     网址1 特征码
+  
     网址2 特征码
     
      . . . . . .
 
-  - 通知公告
+  - 通知公告.txt
+    
      内置了2023-08-27 22:34:27前 http://www.hljit.edu.cn/Category_296/Index.aspx 的页面信息
 
-  - 文件下载
+  - 文件下载.txt
+    
      内置了2023-08-27 22:35:13前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
 
 - main.py
