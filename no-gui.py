@@ -83,6 +83,24 @@ while True:
     for i in range(len(urls)):
         url = urls[i]
         code = codes[i]
+    try:
+        response = requests.get(url)
+    except ConnectionError as e:
+        now1 = time.localtime()
+        current_time = now.time()
+        if now1.tm_hour >= 8 and now1.tm_hour <= 23:
+            time.sleep(15 * 60)
+            print('状态异常，暂停15分钟')
+        else:
+            # 计算还有多久到8点
+            hours_to_8 = 8 - current_time.hour
+            mins_to_8 = (60 - current_time.minute) if current_time.minute != 0 else 0
+            secs_to_8 = (60 - current_time.second) if mins_to_8 == 0 else 0
+            if hours_to_8 < 0:
+                hours_to_8 = 0
+            # 暂停相应秒数
+            time.sleep(hours_to_8 * 3600 + mins_to_8 * 60 + secs_to_8 + 120)
+            print('状态异常，暂停运行至8点')
 
         # 判断状态码
     try:
@@ -90,14 +108,20 @@ while True:
         res.raise_for_status()
     except requests.ConnectionError:
         now = time.localtime()
-        if now.tm_hour >= 8 and now.tm_hour <= 23:
+        current_time = now.time()
+        if now.tm_hour >= 8 and now.tm_hour < 23:
             print('连接异常,暂停15分钟')
             time.sleep(15 * 60)
         else:
-            print('连接异常,暂停到8点')
-            while now.tm_hour < 8:
-                time.sleep(600)
-                now = time.localtime()
+            # 计算还有多久到8点
+            hours_to_8 = 8 - current_time.hour
+            mins_to_8 = (60 - current_time.minute) if current_time.minute != 0 else 0
+            secs_to_8 = (60 - current_time.second) if mins_to_8 == 0 else 0
+            if hours_to_8 < 0:
+                hours_to_8 = 0
+            # 暂停相应秒数
+            time.sleep(hours_to_8 * 3600 + mins_to_8 * 60 + secs_to_8 + 120)
+            print('状态异常，暂停运行至8点')
 
         if res.status_code == 200:
             print(f'{url} 状态码正常,继续运行')
