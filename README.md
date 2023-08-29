@@ -1,13 +1,13 @@
 # Hljit_Web_Cron
 监控黑龙江工程学院官网的超链接的变化，并在发生变化时将变动邮件通知到指定邮箱。
 
-#### 问题声明
+本来想简称HGC_Wc来着，后来想了想不太文明，就Wec吧
 
-0.0.3版本出现致命错误，导致无法实现预期功能，请到Releases下载0.0.2版本使用
+#### 问题声明
 
 目前已知仍存在部分问题
 
-1. 在官网夜间关闭期间，可能存在不稳定问题，目前尚在调试
+1. 在官网夜间关闭期间，可能存在不稳定问题，目前尚在调试中。
 
 #### 项目说明
 
@@ -30,11 +30,11 @@
 
    - 通知公告.txt
     
-     内置了2023-08-27 22:34:27前 http://www.hljit.edu.cn/Category_296/Index.aspx 的页面信息
+     内置了2023-08-29 21:51:31前 http://www.hljit.edu.cn/Category_296/Index.aspx 的页面信息
 
    - 文件下载.txt
     
-     内置了2023-08-27 22:35:13前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
+     内置了2023-08-29 21:51:21前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
 
 - main.py
   
