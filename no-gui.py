@@ -12,7 +12,6 @@ my_sender = ''
 my_user = ''
 my_pass = ''
 
-
 def send_mail(to_list, sub, content):
     msg = MIMEText(content, _subtype='html', _charset='utf-8')
     msg['Subject'] = Header(sub, 'utf-8')
@@ -27,8 +26,8 @@ def send_mail(to_list, sub, content):
 
 
 # 获取输入的邮箱和秒数
-emails = 'yourmail@domain.com+++yourmail2@domain.com' #接收通知的邮箱
-seconds = int(80) #运行频率
+emails = ''
+seconds = int(30)
 email_list = emails.split('+++')
 
 with open('./links/config', encoding='utf-8') as f:
@@ -70,117 +69,97 @@ def update_links_file(filename, new_links):
 
     return add_links
 
+def main():
+    # 检查是否存在links目录,不存在则创建
 
-# 检查是否存在links目录,不存在则创建
+    if not os.path.exists('./links'):
+        os.makedirs('./links')
 
-if not os.path.exists('./links'):
-    os.makedirs('./links')
+    # 向邮箱发送配置成功提示
+    send_mail(email_list, '教务通知监控', '监控系统启动成功，若有新通知则通知至此邮箱，收到此邮件暨系统运行正常。\n From 636.')
 
-# 向邮箱发送配置成功提示
-send_mail(email_list, '教务通知监控', '监控系统启动成功，若有新通知则通知至此邮箱，收到此邮件暨系统运行正常。\n From 636.')
+    while True:
+        for i in range(len(urls)):
+            url = urls[i]
+            code = codes[i]
 
-while True:
-    for i in range(len(urls)):
-        url = urls[i]
-        code = codes[i]
-    try:
-        response = requests.get(url)
-    except ConnectionError as e:
-        now1 = time.localtime()
-        current_time = now.time()
-        if now1.tm_hour >= 8 and now1.tm_hour <= 23:
-            time.sleep(15 * 60)
-            print('状态异常，暂停15分钟')
-        else:
-            # 计算还有多久到8点
-            hours_to_8 = 8 - current_time.hour
-            mins_to_8 = (60 - current_time.minute) if current_time.minute != 0 else 0
-            secs_to_8 = (60 - current_time.second) if mins_to_8 == 0 else 0
-            if hours_to_8 < 0:
-                hours_to_8 = 0
-            # 暂停相应秒数
-            time.sleep(hours_to_8 * 3600 + mins_to_8 * 60 + secs_to_8 + 120)
-            print('状态异常，暂停运行至8点')
+            try:
+                requests.head(url)
+                print('连接正常，继续运行')
+            except requests.exceptions.ConnectionError:
+                now = time.localtime()
+                if 9 <= now.tm_hour <= 22:
+                    print(f'{url} 连接异常,暂停10分钟后重试')
+                    time.sleep(600)
+                else:
+                    wait_time = ((8 - now.tm_hour) * 3600) + (60 - now.tm_min) * 60
+                    print(f'{url} 连接异常,暂停{wait_time}秒后重试')
+                    time.sleep(wait_time)
+                continue
 
-        # 判断状态码
-    try:
-        res = requests.get(url)
-        res.raise_for_status()
-    except requests.ConnectionError:
-        now = time.localtime()
-        current_time = now.time()
-        if now.tm_hour >= 8 and now.tm_hour < 23:
-            print('连接异常,暂停15分钟')
-            time.sleep(15 * 60)
-        else:
-            # 计算还有多久到8点
-            hours_to_8 = 8 - current_time.hour
-            mins_to_8 = (60 - current_time.minute) if current_time.minute != 0 else 0
-            secs_to_8 = (60 - current_time.second) if mins_to_8 == 0 else 0
-            if hours_to_8 < 0:
-                hours_to_8 = 0
-            # 暂停相应秒数
-            time.sleep(hours_to_8 * 3600 + mins_to_8 * 60 + secs_to_8 + 120)
-            print('状态异常，暂停运行至8点')
-
-        if res.status_code == 200:
-            print(f'{url} 状态码正常,继续运行')
-        else:
-            now = time.localtime()
-            if now.tm_hour >= 8 and now.tm_hour <= 23:
-                print(f'{url}状态码异常,暂停15分钟后继续')
-                time.sleep(900)
-            else:
-                print(f'{url}状态码异常,暂停到8:00后继续')
-                while True:
-                    if time.localtime().tm_hour >= 8:
-                        break
-                    time.sleep(300)
-
-        try:
+            # 判断状态码
             res = requests.get(url)
-            res.raise_for_status()
-            soup = BeautifulSoup(res.text, 'html.parser')
-            links = soup.find_all('a')
+            if res.status_code == 200:
+                print(f'{url} 状态码正常,继续运行')
+            else:
+                now = time.localtime()
+                if now.tm_hour >= 8 and now.tm_hour <= 23:
+                    print(f'{url}状态码异常,暂停15分钟后继续')
+                    time.sleep(900)
+                else:
+                    print(f'{url}状态码异常,暂停到8:00后继续')
+                    while True:
+                        if time.localtime().tm_hour >= 8:
+                            break
+                        time.sleep(300)
 
-            filename = './links/' + code + '.txt'
+            try:
+                res = requests.get(url)
+                res.raise_for_status()
+                soup = BeautifulSoup(res.text, 'html.parser')
+                links = soup.find_all('a')
 
-            if not os.path.exists(filename):
+                filename = './links/' + code + '.txt'
+
+                if not os.path.exists(filename):
+                    with open(filename, 'w', encoding='utf-8') as f:
+                        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
+
+                with open(filename, 'r', encoding='utf-8') as f:
+                    content = f.readlines()
+
+                old_links = [i.strip() for i in content[1:]]
+
+                new_links = []
+                for link in links:
+                    new_links.append(link.text + ' ' + link.get('href'))
+
+                add_links = update_links_file(filename, new_links)
+
+                if add_links:
+                    content = f'检测到{code}Page更新了内容:</br>'
+
+                    for x in add_links:
+                        link_name, link_url = x.split(' ')
+                        content += f'{link_name}</br>'
+                        content += f'<a href="http://www.hljit.edu.cn{link_url}">http://www.hljit.edu.cn{link_url}</a></br>'
+                        content += '请及时关注!</br>'
+                        content += 'From Fraic Tool.</br>'
+                    msg = MIMEText(content, _subtype='html', _charset='utf-8')
+                    msg['Subject'] = 'Page内容·更新通知'  # 标题为纯文本
+                    print('检测到新链接,发送邮件通知...')
+                    send_mail(email_list, 'Page内容·更新通知', content)
+
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
+                    for x in new_links:
+                        f.write(x + '\n')
 
-            with open(filename, 'r', encoding='utf-8') as f:
-                content = f.readlines()
+            except Exception as e:
+                print('Error:', e)
 
-            old_links = [i.strip() for i in content[1:]]
+            finally:
+                time.sleep(seconds)
 
-            new_links = []
-            for link in links:
-                new_links.append(link.text + ' ' + link.get('href'))
-
-            add_links = update_links_file(filename, new_links)
-
-            if add_links:
-                content = f'检测到{code}Page更新了内容:</br>'
-
-                for x in add_links:
-                    link_name, link_url = x.split(' ')
-                    content += f'{link_name}</br>'
-                    content += f'<a href="http://www.hljit.edu.cn{link_url}">http://www.hljit.edu.cn{link_url}</a></br>'
-                    content += '请及时关注!</br>'
-                    content += 'From Fraic Tool.</br>'
-                msg = MIMEText(content, _subtype='html', _charset='utf-8')
-                msg['Subject'] = 'Page内容·更新通知'  # 标题为纯文本
-                print('检测到新链接,发送邮件通知...')
-                send_mail(email_list, 'Page内容·更新通知', content)
-
-            with open(filename, 'w', encoding='utf-8') as f:
-                f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
-                for x in new_links:
-                    f.write(x + '\n')
-
-        except Exception as e:
-            print('Error:', e)
-
-        finally:
-            time.sleep(seconds)
+if __name__ == '__main__':
+  main()
