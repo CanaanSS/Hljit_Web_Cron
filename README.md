@@ -17,6 +17,13 @@
 
 初学者代码比较烂而且也没啥稀奇功能，大佬们手下留情。。。
 
+#### 运行依赖
+```shell
+pip install requests
+pip install BeautifulSoup4
+```
+
+
 ### 文件结构及说明
 
 - links
