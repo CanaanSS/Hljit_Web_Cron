@@ -21,43 +21,20 @@
 ```shell
 pip install requests
 pip install BeautifulSoup4
+pip install schedule
 ```
 
 
-### 文件结构及说明
+### 使用说明
 
-- links
-   - config
-    
-        网址1 特征码
+  第29行中的‘from_emailr’值修改为发件邮箱
   
-        网址2 特征码
-    
-        . . . . . .
-
-   - 通知公告.txt
-    
-     内置了2023-08-29 21:51:31前 http://www.hljit.edu.cn/Category_296/Index.aspx 的页面信息
-
-   - 文件下载.txt
-    
-     内置了2023-08-29 21:51:21前 http://www.hljit.edu.cn/Category_298/Index.aspx 的页面信息
-
-- main.py
+  第31行中的‘passwd’值修改为邮箱授权码（密码）
   
-  第11行中的‘my_sender’值修改为发件邮箱
+  第43行中的 ‘stmp.126.com’ 改为自己邮箱服务商的SMTP地址
   
-  第12行中的‘my_user’值修改为邮箱用户名
+  第43行中的‘465’为SMTP服务器的端口，此脚本默认开启SSL安全连接，接口465尽量保持不变
   
-  第13行中的‘my_pass’值修改为邮箱授权码（密码）
+  web_list列表中为监控的页面网址
   
-  第20行中的 ‘stmp.126.com’ 改为自己邮箱服务商的SMTP地址
-  
-  第20行中的‘465’为SMTP服务器的端口，此脚本默认开启SSL安全连接，接口465尽量保持不变
-
-
-- no-gui.py
-  
-  与main.py使用方法无异
-  
-  主程序的无输入版本，将main.py中需输入的数值设置为常量，适合托管到服务器运行
+  notice_list列表中为接收通知的邮箱地址
