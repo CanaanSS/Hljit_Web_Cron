@@ -1,166 +1,131 @@
 import requests
 from bs4 import BeautifulSoup
+import os
+import schedule
 import time
+import datetime
 import smtplib
 from email.mime.text import MIMEText
-from email.header import Header
-import os
-import re
+from email.mime.multipart import MIMEMultipart
+import ssl
 
-# 发件邮箱配置
-my_sender = ''
-my_user = ''
-my_pass = ''
+# 初始化web_list
+web_list = [
+    {"name": "教务科", "url": "http://www.hljit.edu.cn/Category_581/Index.aspx"},
+    {"name": "考务科", "url": "http://www.hljit.edu.cn/Category_582/Index.aspx"},
+    {"name": "信息管理科", "url": "http://www.hljit.edu.cn/Category_586/Index.aspx"},
+    # 添加更多网站
+]
+# 存储被通知的邮箱
+notice_list = ["12345@qq.com","12345s@qq.com"]  # 添加通知邮箱地址
 
-def send_mail(to_list, sub, content):
-    msg = MIMEText(content, _subtype='html', _charset='utf-8')
-    msg['Subject'] = Header(sub, 'utf-8')
+# 检测log.txt文件是否存在，如不存在则创建
+if not os.path.isfile("log.txt"):
+    with open("log.txt", "w", encoding="utf-8") as log_file:
+        log_file.write("Log Created|{}\n".format(datetime.datetime.now()))
+
+# 辅助函数：发送邮件通知
+def send_email(subject, message, to_email):
+    from_email = ""  # 发件人邮箱
+    from_name = "Stsbot"
+    password = ""  # 发件人邮箱密码
+
+    msg = MIMEMultipart()
+    msg["Subject"] = subject
+    msg["From"] = f"{from_name} <{from_email}>"
+    msg["To"] = to_email
+
+    text = MIMEText(message, "html")
+    msg.attach(text)
 
     try:
-        s = smtplib.SMTP_SSL("smtp.126.com", 465)
-        s.login(my_sender, my_pass)
-        s.sendmail(my_sender, to_list, msg.as_string())
-        print("邮件发送成功")
-    except s.SMTPException:
-        print("Error: 无法发送邮件")
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL("smtp.126.com", 465, context=context)#将smtp.126.com更改为发件邮箱的SMTP服务器
+        server.login(from_email, password)
+        server.sendmail(from_email, to_email, msg.as_string())
+        server.quit()
+        print("Email sent successfully.")
+        return True
+    except Exception as e:
+        print(f"Email error: {str(e)}")
+        return False
 
+# 构建HTML格式的邮件内容
+def build_email_content(website_name, new_links):
+    email_content = f"<h1>{website_name}通知页面有内容更新</h1>\n"
+    email_content += "<h3>新增通知：</h3>\n"
 
-# 获取输入的邮箱和秒数
-emails = input("请输入邮箱(多个用+++隔开):")
-seconds = int(input("请输入秒数:"))
-email_list = emails.split('+++')
+    for link in new_links:
+        link_url, link_text = link.split("|", 1)
+        email_content += f"{link_text}<a href='http://www.hljit.edu.cn/{link_url}' target='_blank'>http://www.hljit.edu.cn/{link_url}</a><br>\n"
 
-with open('./links/config', encoding='utf-8') as f:
-  lines = f.readlines()
+    return email_content
 
-urls = []
-codes = []
+# 访问网页、抓取链接并记录到文件
+def scrape_website(url, name):
+    try:
+        response = requests.get(url)
+        status_code = response.status_code
+        if status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            links = soup.find_all("a")
+            links_info = [f"{link.get('href')}|{link.text.strip()}" for link in links]
 
-for line in lines:
-  url, code = line.split()
-  urls.append(url)
-  codes.append(code)
+            # 检查是否存在对应的文件
+            filename = f"{name}.txt"
+            temp_filename = f"{name}_temp.txt"
 
-# 更新链接文件函数
-def update_links_file(filename, new_links):
-    with open(filename, 'r', encoding='utf-8') as f:
-        content = f.readlines()
+            if not os.path.isfile(filename):
+                with open(filename, "w", encoding="utf-8") as file:
+                    pass
 
-    old_links = [i.strip() for i in content[1:]]
+            with open(temp_filename, "w", encoding="utf-8") as temp_file:
+                temp_file.write("\n".join(links_info))
 
-    add_links = []
-    for x in new_links:
-        if "/Category_" not in x and x not in old_links:
-            add_links.append(x)
+            with open(filename, "r", encoding="utf-8") as file:
+                existing_links = set(file.read().splitlines())
 
-    if add_links:
+            with open(temp_filename, "r", encoding="utf-8") as temp_file:
+                new_links = set(temp_file.read().splitlines())
 
-        with open(filename, 'a', encoding='utf-8') as f:
+            diff = new_links.difference(existing_links)
 
-            f.write('\n')
+            if diff:
+                with open(filename, "a", encoding="utf-8") as file:
+                    file.write("\n" + "\n".join(diff))
 
-            for x in add_links:
-                link_str = x.strip()
+                # 发送邮件通知
+                subject = f"{name}通知页面有内容更新"
+                email_content = build_email_content(name, diff)
+                for recipient in notice_list:
+                    if send_email(subject, email_content, recipient):
+                        print("New links notification sent.")
+                # 记录删除记录至log.txt文件中
+                with open("log.txt", "a", encoding="utf-8") as log_file:
+                    log_file.write(f"{name} Updated|{datetime.datetime.now}\n")
 
-                link_name = link_str.split(' ')[0]
-                link_url = ' '.join(link_str.split(' ')[1:])
+                print("New links recorded.")
 
-                f.write(f'{link_name} {link_url}\n')
+            os.remove(temp_filename)
 
-    return add_links
+        else:
+            current_time = datetime.datetime.now()
+            if 8 <= current_time.hour < 21 and status_code != 200:
+                print(f"Status code is not 200. Sleeping for 10 minutes...")
+                time.sleep(600)  # 10 minutes sleep
+            elif current_time.hour >= 21:
+                sleep_duration = (datetime.datetime(current_time.year, current_time.month, current_time.day, 21, 30) - current_time).seconds
+                print(f"Sleeping until 8:00 AM...")
+                time.sleep(sleep_duration + 3600)  # Sleep until 8:00 AM
 
+    except Exception as e:
+        print(f"Error while scraping {name}: {str(e)}")
 
-def main():
-    # 检查是否存在links目录,不存在则创建
+# 定时任务
+for website in web_list:
+    schedule.every(30).seconds.do(scrape_website, website["url"], website["name"])
 
-    if not os.path.exists('./links'):
-        os.makedirs('./links')
-
-    # 向邮箱发送配置成功提示
-    send_mail(email_list, '教务通知监控', '监控系统启动成功，若有新通知则通知至此邮箱，收到此邮件暨系统运行正常。\n From 636.')
-
-    while True:
-        for i in range(len(urls)):
-            url = urls[i]
-            code = codes[i]
-
-            try:
-                requests.head(url)
-                print('连接正常，继续运行')
-            except requests.exceptions.ConnectionError:
-                now = time.localtime()
-                if 9 <= now.tm_hour <= 22:
-                    print(f'{url} 连接异常,暂停10分钟后重试')
-                    time.sleep(600)
-                else:
-                    wait_time = ((8 - now.tm_hour) * 3600) + (60 - now.tm_min) * 60
-                    print(f'{url} 连接异常,暂停{wait_time}秒后重试')
-                    time.sleep(wait_time)
-                continue
-
-            # 判断状态码
-            res = requests.get(url)
-            if res.status_code == 200:
-                print(f'{url} 状态码正常,继续运行')
-            else:
-                now = time.localtime()
-                if now.tm_hour >= 8 and now.tm_hour <= 23:
-                    print(f'{url}状态码异常,暂停15分钟后继续')
-                    time.sleep(900)
-                else:
-                    print(f'{url}状态码异常,暂停到8:00后继续')
-                    while True:
-                        if time.localtime().tm_hour >= 8:
-                            break
-                        time.sleep(300)
-
-            try:
-                res = requests.get(url)
-                res.raise_for_status()
-                soup = BeautifulSoup(res.text, 'html.parser')
-                links = soup.find_all('a')
-
-                filename = './links/' + code + '.txt'
-
-                if not os.path.exists(filename):
-                    with open(filename, 'w', encoding='utf-8') as f:
-                        f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
-
-                with open(filename, 'r', encoding='utf-8') as f:
-                    content = f.readlines()
-
-                old_links = [i.strip() for i in content[1:]]
-
-                new_links = []
-                for link in links:
-                    new_links.append(link.text + ' ' + link.get('href'))
-
-                add_links = update_links_file(filename, new_links)
-
-                if add_links:
-                    content = f'检测到{code}Page更新了内容:</br>'
-
-                    for x in add_links:
-                        link_name, link_url = x.split(' ')
-                        content += f'{link_name}</br>'
-                        content += f'<a href="http://www.hljit.edu.cn{link_url}">http://www.hljit.edu.cn{link_url}</a></br>'
-                        content += '请及时关注!</br>'
-                        content += 'From Fraic Tool.</br>'
-                    msg = MIMEText(content, _subtype='html', _charset='utf-8')
-                    msg['Subject'] = 'Page内容·更新通知'  # 标题为纯文本
-                    print('检测到新链接,发送邮件通知...')
-                    send_mail(email_list, 'Page内容·更新通知', content)
-
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(f'{time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())}\n')
-                    for x in new_links:
-                        f.write(x + '\n')
-
-            except Exception as e:
-                print('Error:', e)
-
-            finally:
-                time.sleep(seconds)
-
-if __name__ == '__main__':
-  main()
+# 开始执行定时任务
+while True:
+    schedule.run_pending()
+    time.sleep(1)
